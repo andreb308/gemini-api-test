@@ -17,18 +17,27 @@ app.get("/", async function (req, res) {
 
     if (!prompt) {
       // throw new Error("Please provide a prompt.");
-      res.send("Please provide a prompt.");
+      res.send({ status: 422, message: "Please provide a prompt." });
       return;
     }
 
     console.log(prompt);
 
-    const text = await model
+    const response = await model
       .generateContent(prompt)
-      .then((result) => result.response.text());
-    res.send(text);
+      .then((result) => result.response);
+    if (response.candidates[0].finishReason !== "STOP") {
+      res.send({
+        status: 502,
+        error:
+          "A trava de segurança do Google foi acionada. Tente outra letra.",
+        finishReason: response.candidates[0].finishReason,
+      });
+      return;
+    }
+    res.send({ status: 200, response });
   } catch (e) {
-    res.send(e);
+    res.send({ status: 500, error: e });
   }
 });
 app.listen(1313, () => console.log("Server ready on port 1313."));
